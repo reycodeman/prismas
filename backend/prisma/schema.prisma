@@ -1,0 +1,94 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum de papéis dos usuários
+enum Role {
+  ADMIN
+  MANAGER
+  TEACHER
+  STUDENT
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  password     String
+  name         String
+  role         Role     @default(STUDENT)
+  refreshToken String? // <- Necessário para o AuthService
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relações
+  teacher Teacher?
+  student Student?
+
+  posts          Post[]
+  comments       Comment[]
+  likes          Like[]
+}
+
+model Teacher {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @unique
+  bio       String?
+  subject   String?
+  hireDate  DateTime? // <- Usado no TeachersService
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id])
+  students Student[] @relation("TeacherStudents")
+}
+
+model Student {
+  id                 Int      @id @default(autoincrement())
+  userId             Int      @unique
+  registrationNumber String   @unique
+  course             String? // <- Usado no StudentsService
+  teacherId          Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  teacher Teacher? @relation("TeacherStudents", fields: [teacherId], references: [id])
+}
+
+model Post {
+  id          Int       @id @default(autoincrement())
+  content     String
+  imageUrl    String?   // opcional
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  authorId    Int
+  author      User      @relation(fields: [authorId], references: [id])
+  comments    Comment[]
+  likes       Like[]
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  authorId  Int
+  postId    Int
+  author    User     @relation(fields: [authorId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+}
+
